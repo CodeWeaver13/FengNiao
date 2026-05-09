@@ -106,6 +106,24 @@ struct SwiftMemberAccessSearchRule: FileSearchRule {
             excludedRanges.append(match.range)
         }
 
+        // Catches dot-prefixed nested chains like `.Icons.Settings.logo` regardless of surrounding
+        // call syntax, so type-inference forms (`let r: ImageResource = .A.B.c`,
+        // `UIImage(resource: .A.B.c)`) are not split into single-component leaves by the fallback.
+        let dotPrefixedNestedPattern = #"(?<![A-Za-z0-9_])\.\s*([A-Za-z0-9_]+(?:\s*\.\s*[A-Za-z0-9_]+)+)"#
+        let dotPrefixedNestedReg = try! NSRegularExpression(pattern: dotPrefixedNestedPattern, options: [])
+        let dotPrefixedNestedMatches = dotPrefixedNestedReg.matches(in: content, options: [], range: content.fullRange)
+        for match in dotPrefixedNestedMatches {
+            if excludedRanges.contains(where: { NSLocationInRange(match.range.location, $0) }) {
+                continue
+            }
+            let identifierRange = match.range(at: 1)
+            guard identifierRange.location != NSNotFound else { continue }
+            let identifier = nsstring.substring(with: identifierRange)
+                .replacingOccurrences(of: #"\s*\.\s*"#, with: ".", options: .regularExpression)
+            result.insert(".\(identifier)")
+            excludedRanges.append(match.range)
+        }
+
         let pattern = #"(?<![A-Za-z0-9_])(UIImage|UIColor|NSImage|NSColor|Image|Color)?\s*\.\s*([A-Za-z0-9_]+)"#
         let reg = try! NSRegularExpression(pattern: pattern, options: [])
         let matches = reg.matches(in: content, options: [], range: content.fullRange)

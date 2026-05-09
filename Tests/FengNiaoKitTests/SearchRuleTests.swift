@@ -153,6 +153,20 @@ struct SearchRuleTests {
         #expect(result == expected)
     }
 
+    @Test("Swift member access rule applies to nested symbols via type inference")
+    func swiftMemberAccessRuleAppliesToNestedSymbolsViaTypeInference() {
+        let searcher = SwiftMemberAccessSearchRule()
+        let content = """
+        let r: ImageResource = .Icons.Settings.logo
+        let img = UIImage(resource: .Symbols.plug)
+        let view = ContentView(image: .Icons.Settings.logo, fallback: .emptyIcon)
+        """
+        let result = searcher.search(in: content)
+        #expect(result.contains(".Icons.Settings.logo"))
+        #expect(result.contains(".Symbols.plug"))
+        #expect(result.contains(".emptyIcon"))
+    }
+
     @Test("Swift member access rule ignores custom type prefixes that only end with asset type names")
     func swiftMemberAccessRuleIgnoresCustomTypePrefixesThatOnlyEndWithAssetTypeNames() {
         let searcher = SwiftMemberAccessSearchRule()
